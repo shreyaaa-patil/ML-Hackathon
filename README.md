@@ -119,3 +119,19 @@ python run_pipeline.py --stage optimize
 * **Geographical Visualizations:** `outputs/maps/00000001_eda_map.html` & `outputs/eda/plots/*.png`
 * **5-Model Benchmark Results:** `artifacts/training_cv_results.csv` & `outputs/model_comparison/model_comparison.csv`
 * **Model Selection Justification:** `outputs/model_comparison/model_selection_report.md`
+
+## Two-laptop evaluator demo
+
+Keep the `evaluator_test/` partition on the server laptop. After training and
+Optuna optimization, set `PATHSNAP_DATA_ROOT` to the directory containing
+`evaluator_test/`, then start the API from the repository root:
+
+```powershell
+$env:PATHSNAP_DATA_ROOT = "C:\path\to\data-root"
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+```
+
+Laptop 2 can list trip IDs with `GET http://<server-LAN-IP>:8000/trips` and
+request a prediction with `POST /predict` and JSON `{"trip_id":"00000000"}`.
+The response includes aggregate accuracy and predicted route arc IDs; reference
+labels stay on Laptop 1. See `backend/README.md` for setup details.

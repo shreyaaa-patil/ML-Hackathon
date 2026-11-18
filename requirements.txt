@@ -13,3 +13,5 @@ PyYAML>=6.0
 optuna>=3.5
 tqdm>=4.66
 jupyter>=1.0
+fastapi>=0.110
+uvicorn[standard]>=0.27

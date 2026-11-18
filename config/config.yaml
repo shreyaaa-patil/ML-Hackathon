@@ -1,7 +1,7 @@
 data_root: data/raw
 training_partition: train
 student_partition: student_test
-evaluator_partition: evaluator_testing
+evaluator_partition: evaluator_test
 candidate: {radius_m: 75, max_candidates: 6}
 label_max_distance_m: 100
 random_seed: 42
