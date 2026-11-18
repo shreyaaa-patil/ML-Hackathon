@@ -1,6 +1,8 @@
 """Server-side evaluator API for the two-laptop PathSnap demo."""
 from __future__ import annotations
 
+from typing import Literal
+
 import logging
 import os
 import re
@@ -14,7 +16,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from joblib import load
 
-from src.data.loader import discover_trip_dirs, load_trip
+from src.data.loader import discover_trip_dirs, load_trip, load_track, load_nodes, load_arcs
 from src.features.candidate_generator import generate_candidates
 from src.features.feature_extractor import (
     FEATURE_COLUMNS,
@@ -201,3 +203,49 @@ def predict_evaluator_trip(request: PredictRequest) -> PredictResponse:
     except Exception as exc:
         logger.exception("Prediction failed trip_id=%s", request.trip_id)
         raise HTTPException(status_code=500, detail="Prediction failed") from exc
+
+
+Dataset = Literal["student", "evaluator"]
+
+
+def dataset_root(dataset: Dataset) -> Path:
+    root = DATA_ROOT / CONFIG["student_partition"] if dataset == "student" else EVALUATOR_ROOT
+    if not root.is_dir():
+        raise HTTPException(503, f"{dataset.capitalize()} dataset is unavailable.")
+    return root
+
+
+@app.get("/datasets/{dataset}/trips", response_model=TripsResponse)
+def dataset_trips(dataset: Dataset):
+    return TripsResponse(trip_ids=[p.name for p in discover_trip_dirs(dataset_root(dataset))])
+
+
+@app.get("/datasets/{dataset}/trips/{trip_id}/map")
+def trip_map(dataset: Dataset, trip_id: str):
+    root = dataset_root(dataset)
+    directory = root / trip_id
+    if directory.resolve().parent != root.resolve() or not directory.is_dir():
+        raise HTTPException(404, "Trip not found")
+    def read(suffix, loader):
+        files = list(directory.glob("*" + suffix))
+        if len(files) != 1 or files[0].resolve().parent != directory.resolve():
+            raise ValueError(f"Expected one {suffix} file in the trip folder")
+        return loader(files[0])
+
+    try:
+        track = read(".track", load_track)
+        nodes = read(".nodes", load_nodes)
+        arcs = read(".arcs", load_arcs)
+        valid = track.latitude.between(-90, 90) & track.longitude.between(-180, 180)
+        if not (nodes.latitude.between(-90, 90) & nodes.longitude.between(-180, 180)).all():
+            raise ValueError("Invalid road node coordinates")
+        ends = arcs[["from_node_id", "to_node_id"]]
+        if ((ends < 0) | (ends >= len(nodes))).any().any():
+            raise ValueError("Invalid road node index")
+        return {
+            "gps": track.loc[valid, ["latitude", "longitude"]].values.tolist(),
+            "nodes": nodes[["latitude", "longitude"]].values.tolist(),
+            "arcs": ends.values.tolist(),
+        }
+    except (ValueError, OSError) as error:
+        raise HTTPException(422, str(error)) from error

@@ -10,7 +10,9 @@ def create_trip_map(
     arcs,
     route_arc_ids,
     output_path,
-    tiles="CartoDB positron"
+    tiles="CartoDB positron",
+    route_layer_name="Reference route",
+    route_color="green",
 ):
     """
     Generate an interactive PathSnap map.
@@ -171,7 +173,7 @@ def create_trip_map(
     # --------------------------------------------------
 
     ref = FeatureGroup(
-        name="Reference route",
+        name=route_layer_name,
         show=True
     )
 
@@ -209,10 +211,10 @@ def create_trip_map(
 
         folium.PolyLine(
             segment,
-            color="green",
+            color=route_color,
             weight=5,
             opacity=0.9,
-            tooltip=f"Reference arc: {arc_id}"
+            tooltip=f"{route_layer_name} arc: {arc_id}"
         ).add_to(ref)
 
         route_coordinates.extend(segment)

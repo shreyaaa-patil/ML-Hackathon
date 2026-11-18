@@ -55,10 +55,21 @@ def _gps_distance(track: pd.DataFrame, previous_obs: int, current_obs: int) -> f
     return float(haversine_m(a.longitude, a.latitude, b.longitude, b.latitude))
 
 
+def _elapsed_seconds(track: pd.DataFrame, previous_obs: int, current_obs: int) -> float:
+    """Return a positive GPS time gap when timestamps are available."""
+    if "timestamp" not in track.columns:
+        return 0.0
+    if previous_obs not in track.index or current_obs not in track.index:
+        return 0.0
+    delta = float(track.loc[current_obs, "timestamp"] - track.loc[previous_obs, "timestamp"])
+    return max(delta, 0.0) if np.isfinite(delta) else 0.0
+
+
 def decode_route(track: pd.DataFrame, candidates: pd.DataFrame, road_graph: RoadGraph,
                  score_column: str = "score", observation_column: str = "observation_id",
                  arc_column: str = "candidate_arc_id", transition_sigma_m: float = 35.0,
-                 relative_sigma: float = 0.35, probability_floor: float = 1e-12
+                 relative_sigma: float = 0.35, gap_uncertainty_mps: float = 5.0,
+                 probability_floor: float = 1e-12
                  ) -> RouteDecodeResult:
     """Decode candidate probabilities with a route-connectivity HMM.
 
@@ -108,7 +119,12 @@ def decode_route(track: pd.DataFrame, candidates: pd.DataFrame, road_graph: Road
         previous_id = int(previous[observation_column].iloc[0])
         current_id = int(current[observation_column].iloc[0])
         observed_distance = _gps_distance(points, previous_id, current_id)
-        sigma = max(float(transition_sigma_m), float(relative_sigma) * observed_distance)
+        elapsed = _elapsed_seconds(points, previous_id, current_id)
+        sigma = max(
+            float(transition_sigma_m),
+            float(relative_sigma) * observed_distance,
+            float(gap_uncertainty_mps) * elapsed,
+        )
         raw = np.full((len(previous), len(current)), -np.inf, dtype=float)
 
         for i, state_a in previous.iterrows():

@@ -120,6 +120,34 @@ python run_pipeline.py --stage optimize
 * **5-Model Benchmark Results:** `artifacts/training_cv_results.csv` & `outputs/model_comparison/model_comparison.csv`
 * **Model Selection Justification:** `outputs/model_comparison/model_selection_report.md`
 
+## Model comparison, Bayesian tuning, and HMM evidence
+
+Run the full sequence after EDA. Replace the data-root path with the folder
+containing `train/` and `student_test/`:
+
+```powershell
+python run_pipeline.py --stage eda --data-root "C:\path\to\data-root"
+python run_pipeline.py --stage features --data-root "C:\path\to\data-root"
+python run_pipeline.py --stage train --data-root "C:\path\to\data-root"
+python run_pipeline.py --stage optimize --data-root "C:\path\to\data-root"
+python run_pipeline.py --stage decode --data-root "C:\path\to\data-root"
+```
+
+The five-model plots are saved under `outputs/model_comparison/plots/` and
+include grouped cross-validation Macro F1, student-test candidate Macro F1,
+Top-1 Accuracy and Top-1 Macro F1, and candidate Log Loss. Tuning writes
+`outputs/optimization/optimization_report.md`, the tuned-versus-untuned metric
+table, and comparison plots. The report records the chosen model, Optuna search
+ranges, objective, trial count, best parameters, test results, and inference
+time. HMM-versus-classifier results, paired per-trip plots, and route maps are
+written by `--stage decode`; see `src/routing/README.md`.
+
+These classifiers do not expose epoch-wise training histories, so the project
+does not generate training or validation loss curves for them. No artificial
+curves are used. Student-test and HMM metrics exclude observations whose route
+labels could not be aligned; generated reports include the matched-label
+coverage so the score denominator is visible.
+
 ## Two-laptop evaluator demo
 
 Keep the `evaluator_test/` partition on the server laptop. After training and
