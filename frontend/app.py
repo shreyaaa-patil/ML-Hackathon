@@ -25,7 +25,7 @@ def draw_map(data, prediction):
     gps, nodes, arcs = data["gps"], data["nodes"], data["arcs"]
     points = gps or nodes
     view = folium.Map(location=points[0] if points else [0, 0], zoom_start=2,
-                      tiles="OpenStreetMap", prefer_canvas=True, control_scale=True)
+                      tiles="CartoDB positron", prefer_canvas=True, control_scale=True)
     lines = [[nodes[start], nodes[end]] for start, end in arcs]
     if lines:
         roads = folium.FeatureGroup(name="Road network").add_to(view)
