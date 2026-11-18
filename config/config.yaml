@@ -1,0 +1,10 @@
+data_root: data/raw
+training_partition: train
+student_partition: student_test
+evaluator_partition: evaluator_testing
+candidate: {radius_m: 75, max_candidates: 6}
+label_max_distance_m: 100
+random_seed: 42
+cv_splits: 5
+max_training_candidate_rows: 60000
+optuna_trials: 30
